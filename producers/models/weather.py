@@ -33,8 +33,8 @@ class Weather(Producer):
 
         super().__init__(
             "weather.events", # TODO: Come up with a better topic name
-            key_schema=Weather.key_schema,
-            value_schema=Weather.value_schema,
+            key_schema=None,
+            value_schema=None,
             num_partitions=1,
             num_replicas=1
         )
@@ -66,32 +66,35 @@ class Weather(Producer):
 
     def run(self, month):
         self._set_weather(month)
-
         resp = requests.post(
             f"{self.rest_proxy_url}/topics/weather.events",
-            headers={"Content-Type": "application/vnd.kafka.json.v2+json"},
+            headers={"Content-Type": "application/vnd.kafka.avro.v2+json"},
             data=json.dumps(
                 {
+                    "value_schema": json.dumps(Weather.value_schema),
+                    "key_schema": json.dumps(Weather.key_schema),
                     "records":[
                         {
-                            "key": {"timestamp": self.time_millis()},
+                           "key": {
+                               "timestamp": self.time_millis()
+                           },
                             "value":{
                                 "temperature": self.temp,
-                                "status":self.status
+                                "status":self.status.name
                             }
                         }
-                    ],
-                    "value_schema":self.value_schema,
-                    "key_schema": self.key_schema
+                    ]
                 }
             ),
         )
+
+
         try:
             resp.raise_for_status()
         except:
             print(f"failed to send weather data: {json.dumps(resp.json(), indent=2)}")
             exit(1)
-        logger.debug(
+        logger.info(
             "sent weather data to kafka, temp: %s, status: %s",
             self.temp,
             self.status.name,
