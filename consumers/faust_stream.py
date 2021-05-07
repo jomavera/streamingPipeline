@@ -56,7 +56,6 @@ async def setLine(station_stream):
             line = line_color
         )
         table[station_event.station_id] = station_event_processed
-        await out_topic.send(key= str(station_event.station_id), value=station_event_processed)
 
 
 if __name__ == "__main__":
